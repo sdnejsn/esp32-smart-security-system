@@ -6,6 +6,7 @@
 - [项目结构](#-项目结构)
 - [核心算法](#-核心算法)
 - [性能指标](#-性能指标)
+- [best.pt引用来源](#-best.pt引用来源)
 
 ---
 
@@ -104,10 +105,7 @@ const char* ssid = "YOUR_WIFI_SSID";      // 替换为你的WiFi
 const char* password = "YOUR_WIFI_PASS";  // 替换为密码
 ```
 
-> 建议路由器绑定静态IP：  
-> ESP32-CAM：192.168.50.27  
-> ESP32 Uno：DHCP或静态  
-> PC服务器：192.168.50.151
+> 建议全部设备在路由器绑定静态IP
 
 ### 4. 部署服务器
 
@@ -134,7 +132,7 @@ python server.py
 python face_detection.py
 
 # 浏览器访问监控面板
-open http://192.168.50.151:5000
+open http://<YOUR_SERVER_IP>:5000
 ```
 
 ---
@@ -149,8 +147,8 @@ project/
 │   │   ├── camera_pins.h         # 引脚定义
 │   │   └── app_httpd.cpp         # HTTP服务器（MJPEG流）
 │   │
-│   └── ESP32Uno/                 # ESP32 Uno固件
-│       └── ESP32Uno.ino          # 传感器采集+报警+上传
+│   └── Sensors/                 # ESP32 Uno固件
+│       └── Sensors.ino          # 传感器采集+报警+上传
 │
 ├── pythonProject/
 │   ├── face_detection.py         # 人脸检测客户端（OpenCV+Haar）
@@ -225,3 +223,19 @@ MJPEG流 ──► 0.5s定时截帧 ──► Haar预检人脸?
 | 温度响应时间 | 瞬时 | 打火机火焰靠近NTC |
 | 系统连续运行 | >24小时 | SVGA单缓冲配置 |
 ```
+
+---
+
+## 📚 best.pt引用来源
+
+### YOLOv8 火焰检测模型
+
+本项目使用的火焰检测模型 `best.pt` 基于以下开源项目训练：
+
+- **项目名称**：Fire-Detection-using-YOLOv8
+- **作者**：noorkhokhar99
+- **来源**：GitHub
+- **年份**：2023
+- **链接**：[https://github.com/noorkhokhar99/Fire-Detection-using-YOLOv8](https://github.com/noorkhokhar99/Fire-Detection-using-YOLOv8)
+
+特此感谢原作者的开源贡献。
