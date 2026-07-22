@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能安防监控系统</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            background: #f0f2f5;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .navbar-brand {
+            font-weight: bold;
+            font-size: 1.5rem;
+        }
+        .card {
+            border-radius: 1rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            margin-bottom: 1.5rem;
+            border: none;
+        }
+        .card-header {
+            background-color: #fff;
+            border-bottom: 2px solid #e9ecef;
+            font-weight: 600;
+            border-radius: 1rem 1rem 0 0 !important;
+            padding: 1rem 1.25rem;
+        }
+        .alert-warning-custom {
+            background-color: #fff3cd;
+            border-left: 5px solid #ffc107;
+            color: #856404;
+        }
+        .alert-danger-custom {
+            background-color: #f8d7da;
+            border-left: 5px solid #dc3545;
+            color: #721c24;
+        }
+        .image-gallery {
+            display: flex;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            gap: 15px;
+            padding: 10px 0;
+        }
+        .image-card {
+            flex: 0 0 auto;
+            width: 180px;
+            cursor: pointer;
+            transition: transform 0.2s;
+            background: #fff;
+            border-radius: 0.75rem;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .image-card:hover {
+            transform: translateY(-5px);
+        }
+        .image-card img {
+            width: 100%;
+            height: 140px;
+            object-fit: cover;
+        }
+        .image-card .info {
+            padding: 8px;
+            font-size: 0.75rem;
+            text-align: center;
+            background: #f8f9fa;
+        }
+        .table-responsive {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .table th {
+            background: #e9ecef;
+            position: sticky;
+            top: 0;
+        }
+        .footer {
+            text-align: center;
+            padding: 1rem;
+            color: #6c757d;
+            font-size: 0.85rem;
+        }
+        @media (max-width: 768px) {
+            .image-card {
+                width: 140px;
+            }
+            .image-card img {
+                height: 100px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-dark bg-dark">
+        <div class="container-fluid">
+            <span class="navbar-brand"><i class="fas fa-shield-alt me-2"></i>智能安防监控系统</span>
+            <span class="text-light small"><i class="fas fa-sync-alt me-1"></i>实时刷新间隔 3 秒</span>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <!-- 传感器曲线图卡片：左右两列布局 -->
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-chart-line me-2"></i>传感器实时趋势
+            </div>
+            <div class="card-body">
+                <!-- 报警区域 -->
+                <div id="sensor-alert" class="mb-3" style="display: none;"></div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="text-center"><i class="fas fa-smog me-1"></i>烟雾浓度 (AO)</h6>
+                        <canvas id="smokeChart" height="200" style="max-height: 250px;"></canvas>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-center"><i class="fas fa-thermometer-half me-1"></i>温度 (AO)</h6>
+                        <canvas id="tempChart" height="200" style="max-height: 250px;"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 四个图片分类展示（横向滚动） -->
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header bg-danger text-white">
+                        <i class="fas fa-fire me-2"></i>火焰检测记录
+                    </div>
+                    <div class="card-body">
+                        <div id="fire-images" class="image-gallery">加载中...</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header bg-warning text-dark">
+                        <i class="fas fa-question-circle me-2"></i>待确认人脸（0.5~0.6）
+                    </div>
+                    <div class="card-body">
+                        <div id="unrecognized-images" class="image-gallery">加载中...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row mt-3">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header bg-success text-white">
+                        <i class="fas fa-user-check me-2"></i>已知人员
+                    </div>
+                    <div class="card-body">
+                        <div id="known-images" class="image-gallery">加载中...</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header bg-secondary text-white">
+                        <i class="fas fa-user-slash me-2"></i>陌生人
+                    </div>
+                    <div class="card-body">
+                        <div id="stranger-images" class="image-gallery">加载中...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 进出记录表格 -->
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-list me-2"></i>最近人员进出记录
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover">
+                        <thead>
+                            <tr><th>时间</th><th>人员</th><th>类型</th></tr>
+                        </thead>
+                        <tbody id="access-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <i class="fas fa-database me-1"></i>数据本地存储 | 人脸识别+火焰检测 | 私有云部署
+        </div>
+    </div>
+
+    <script>
+        let smokeChart = null;
+        let tempChart = null;
+
+        // 阈值定义
+        const SMOKE_THRESHOLD = 1500;
+        const TEMP_LOW = 1400;      // 仅判断温度低于此值报警
+
+        // 通用加载图片函数
+        async function loadImages(folder, containerId) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            try {
+                const response = await fetch(`/get_images/${folder}`);
+                const images = await response.json();
+                if (images.length === 0) {
+                    container.innerHTML = '<div class="text-muted">暂无图片</div>';
+                    return;
+                }
+                let html = '';
+                for (let img of images) {
+                    let folderPath = '';
+                    if (folder === 'known') folderPath = 'uploads_known';
+                    else if (folder === 'stranger') folderPath = 'uploads_stranger';
+                    else if (folder === 'unrecognized') folderPath = 'uploads_unrecognized';
+                    else if (folder === 'fires') folderPath = 'uploads_fires';
+                    html += `
+                        <div class="image-card" onclick="window.open('/${folderPath}/${img.name}', '_blank')">
+                            <img src="/${folderPath}/${img.name}" alt="${img.name}" loading="lazy">
+                            <div class="info">${img.timestamp}</div>
+                        </div>
+                    `;
+                }
+                container.innerHTML = html;
+            } catch (err) {
+                console.error(`加载 ${folder} 失败:`, err);
+                container.innerHTML = '<div class="text-danger">加载失败</div>';
+            }
+        }
+
+        // 更新传感器图表（分别绘制烟雾和温度），并检测超阈值报警
+        async function updateSensorCharts() {
+            try {
+                const res = await fetch('/get_history');
+                const data = await res.json();
+                const sensorData = data.sensor_data || [];
+                // 按时间正序（旧->新）用于曲线
+                const sorted = [...sensorData].reverse();
+                // 收集烟雾和温度数据点
+                const smokePoints = [];
+                const tempPoints = [];
+                for (let item of sorted) {
+                    const timestamp = item[0];
+                    const type = item[1];
+                    const value = item[2];
+                    if (type === 'smoke') {
+                        smokePoints.push({ time: timestamp, val: value });
+                    } else if (type === 'temperature') {
+                        tempPoints.push({ time: timestamp, val: value });
+                    }
+                }
+                // 分别取最近20个点
+                const recentSmoke = smokePoints.slice(-20);
+                const recentTemp = tempPoints.slice(-20);
+                const smokeLabels = recentSmoke.map(p => p.time);
+                const smokeValues = recentSmoke.map(p => p.val);
+                const tempLabels = recentTemp.map(p => p.time);
+                const tempValues = recentTemp.map(p => p.val);
+
+                // 烟雾图表
+                if (smokeChart) {
+                    smokeChart.data.labels = smokeLabels;
+                    smokeChart.data.datasets[0].data = smokeValues;
+                    smokeChart.update();
+                } else {
+                    const ctxSmoke = document.getElementById('smokeChart').getContext('2d');
+                    smokeChart = new Chart(ctxSmoke, {
+                        type: 'line',
+                        data: {
+                            labels: smokeLabels,
+                            datasets: [{
+                                label: '烟雾浓度',
+                                data: smokeValues,
+                                borderColor: 'rgb(255, 99, 132)',
+                                backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                                tension: 0.1,
+                                fill: true
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: true,
+                            plugins: { legend: { position: 'top' } }
+                        }
+                    });
+                }
+
+                // 温度图表
+                if (tempChart) {
+                    tempChart.data.labels = tempLabels;
+                    tempChart.data.datasets[0].data = tempValues;
+                    tempChart.update();
+                } else {
+                    const ctxTemp = document.getElementById('tempChart').getContext('2d');
+                    tempChart = new Chart(ctxTemp, {
+                        type: 'line',
+                        data: {
+                            labels: tempLabels,
+                            datasets: [{
+                                label: '温度',
+                                data: tempValues,
+                                borderColor: 'rgb(54, 162, 235)',
+                                backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                                tension: 0.1,
+                                fill: true
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: true,
+                            plugins: { legend: { position: 'top' } }
+                        }
+                    });
+                }
+
+                // ---------- 超阈值报警检测 ----------
+                // 获取最新的烟雾和温度值（按时间倒序的第一条）
+                const latestSmoke = smokePoints.length ? smokePoints[smokePoints.length - 1] : null;
+                const latestTemp = tempPoints.length ? tempPoints[tempPoints.length - 1] : null;
+
+                let alertMsg = '';
+                let alertClass = '';
+                let smokeAlert = false;
+                let tempAlert = false;
+
+                if (latestSmoke && latestSmoke.val > SMOKE_THRESHOLD) {
+                    smokeAlert = true;
+                }
+                // 温度报警：仅判断低于下限
+                if (latestTemp && latestTemp.val < TEMP_LOW) {
+                    tempAlert = true;
+                }
+
+                if (smokeAlert || tempAlert) {
+                    alertMsg = '<i class="fas fa-exclamation-triangle me-2"></i><strong>传感器报警！</strong><br>';
+                    if (smokeAlert) {
+                        alertMsg += `烟雾浓度异常：${latestSmoke.val} > 阈值 ${SMOKE_THRESHOLD}<br>`;
+                    }
+                    if (tempAlert) {
+                        alertMsg += `温度异常：${latestTemp.val} < 阈值 ${TEMP_LOW}<br>`;
+                    }
+                    alertClass = 'alert-danger-custom';
+                } else if (latestSmoke || latestTemp) {
+                    // 无报警，但已经有数据，可以显示正常提示
+                    alertMsg = '<i class="fas fa-check-circle me-2"></i><strong>传感器状态正常</strong><br>烟雾和温度均在安全范围内。';
+                    alertClass = 'alert-warning-custom';
+                } else {
+                    // 无数据
+                    alertMsg = '<i class="fas fa-info-circle me-2"></i>等待传感器数据...';
+                    alertClass = 'alert-warning-custom';
+                }
+
+                const alertDiv = document.getElementById('sensor-alert');
+                if (alertDiv) {
+                    alertDiv.style.display = 'block';
+                    alertDiv.className = `alert ${alertClass} p-2 mb-3`;
+                    alertDiv.innerHTML = alertMsg;
+                }
+
+            } catch (err) {
+                console.error('更新传感器图表失败:', err);
+                const alertDiv = document.getElementById('sensor-alert');
+                if (alertDiv) {
+                    alertDiv.style.display = 'block';
+                    alertDiv.className = 'alert alert-danger p-2 mb-3';
+                    alertDiv.innerHTML = '<i class="fas fa-exclamation-circle me-2"></i>传感器数据加载失败，请检查服务器连接。';
+                }
+            }
+        }
+
+        // 更新进出记录表格
+        async function updateAccessTable() {
+            try {
+                const res = await fetch('/get_history');
+                const data = await res.json();
+                const logs = data.access_logs || [];
+                const tbody = document.getElementById('access-table-body');
+                tbody.innerHTML = '';
+                for (let log of logs) {
+                    const time = log[0];
+                    const name = log[1];
+                    const isStranger = log[2];
+                    let badge = isStranger === 1 ? '<span class="badge bg-danger">陌生人</span>' : '<span class="badge bg-success">已知</span>';
+                    const row = `<tr><td>${time}</td><td>${name}</td><td>${badge}</td></tr>`;
+                    tbody.insertAdjacentHTML('beforeend', row);
+                }
+            } catch (err) {
+                console.error('更新进出记录失败:', err);
+            }
+        }
+
+        // 刷新所有数据
+        async function refreshAll() {
+            await Promise.all([
+                loadImages('fires', 'fire-images'),
+                loadImages('unrecognized', 'unrecognized-images'),
+                loadImages('known', 'known-images'),
+                loadImages('stranger', 'stranger-images'),
+                updateSensorCharts(),
+                updateAccessTable()
+            ]);
+        }
+
+        // 启动定时刷新
+        refreshAll();
+        setInterval(refreshAll, 3000);
+    </script>
+</body>
+</html>
