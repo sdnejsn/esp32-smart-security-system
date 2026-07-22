@@ -114,8 +114,8 @@ const char* password = "YOUR_WIFI_PASS";  // 替换为密码
 git clone https://github.com/yourusername/smart-security-esp32.git
 cd smart-security-esp32/pythonProject/SmartSecurity
 
-# 安装依赖
-pip install flask face-recognition opencv-python ultralytics numpy
+# 配置环境
+conda env create -f environment.yml
 
 # 准备已知人脸库
 mkdir known_faces
